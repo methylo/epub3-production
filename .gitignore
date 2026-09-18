@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 *.epub
 .DS_Store
+*.hwp
+*.hwpx

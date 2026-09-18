@@ -58,7 +58,7 @@ epubcheck --version
 ### 2단계 — 내려받기
 
 ```bash
-git clone https://github.com/<계정>/epub3-production.git
+git clone https://github.com/methylo/epub3-production.git
 cd epub3-production
 ```
 
@@ -145,7 +145,7 @@ python3 scripts/build_epub.py 원고.hwp --title "제목" --author "저자" \
 이 저장소를 스킬 폴더에 두면 Claude Code에서 바로 호출됩니다.
 
 ```bash
-git clone https://github.com/<계정>/epub3-production.git ~/.claude/skills/epub3-production
+git clone https://github.com/methylo/epub3-production.git ~/.claude/skills/epub3-production
 ```
 
 새 세션부터 `/epub3-production`으로 동작합니다. `SKILL.md`에 절차와 완성 기준이 있습니다.
