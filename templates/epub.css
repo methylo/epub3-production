@@ -1,0 +1,67 @@
+/* EPUB 3 한국어 본문 기본 스타일 */
+
+html { font-size: 100%; }
+
+body {
+  margin: 0 5%;
+  line-height: 1.7;
+  text-align: justify;
+  word-break: keep-all;          /* 한글 단어 중간 줄바꿈 방지 */
+  overflow-wrap: break-word;
+  -epub-line-break: strict;
+  -epub-word-break: keep-all;
+}
+
+/* 제목 */
+h1, h2, h3 {
+  line-height: 1.4;
+  word-break: keep-all;
+  text-align: left;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+h1 {
+  font-size: 1.5em;
+  margin: 2.5em 0 1.2em;
+  page-break-before: always;
+  break-before: page;
+}
+h2 { font-size: 1.2em; margin: 2em 0 0.8em; }
+h3 { font-size: 1.05em; margin: 1.6em 0 0.6em; }
+
+/* 본문 문단: 첫 문단은 들여쓰기 없음 */
+p {
+  margin: 0;
+  text-indent: 1em;
+}
+h1 + p, h2 + p, h3 + p, blockquote p:first-child { text-indent: 0; }
+
+/* 시·인용 행 */
+.line-block {
+  margin: 1.4em 0;
+  text-indent: 0;
+  text-align: left;
+  line-height: 1.9;
+  white-space: normal;
+}
+
+blockquote {
+  margin: 1.4em 1.5em;
+  padding-left: 0.8em;
+  border-left: 2px solid #ccc;
+  text-align: left;
+}
+
+/* 목차 */
+nav#toc ol { list-style-type: none; padding-left: 0; }
+nav#toc ol ol { padding-left: 1.2em; }
+nav#toc li { margin: 0.45em 0; text-indent: 0; }
+nav#toc a { text-decoration: none; }
+
+/* 표지 */
+#cover-image, .cover { text-align: center; margin: 0; padding: 0; }
+#cover-image img, .cover img { max-width: 100%; height: auto; }
+
+img { max-width: 100%; height: auto; }
+
+hr { border: 0; border-top: 1px solid #ddd; margin: 2em 20%; }
