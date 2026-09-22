@@ -1,7 +1,7 @@
 ---
 name: epub3-production
 description: Use when converting Markdown, Word, HWP, or text into EPUB 3.
-version: 0.3.0
+version: 0.4.0
 author: 홍순성, Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -28,7 +28,8 @@ Markdown(`.md`), Word(`.docx`), 한글(`.hwp`·`.hwpx`), 텍스트(`.txt`) 원�
 - 둘 중 하나라도 없으면 설치 또는 실행 환경 준비를 사용자에게 확인한다. 변환 성공으로 간주하지 않는다.
 - 최종 메타데이터는 제목, 저자, 언어를 반드시 정한다. 기본 언어는 한국어 원고에 `ko-KR`이다.
 - HWP 입력은 파이썬 `olefile` 패키지가 필요하다. 스킬 폴더에 `.venv`가 있으면 스크립트가 자동으로 그 인터프리터로 다시 실행한다.
-  없으면 `python3 -m venv .venv && .venv/bin/pip install olefile`로 스킬 폴더에 만든다. HWPX는 추가 설치가 필요 없다.
+  없으면 `python3 -m venv .venv && .venv/bin/pip install olefile Pillow`로 스킬 폴더에 만든다. HWPX는 추가 설치가 필요 없다.
+- 본문 그림 축소에는 `Pillow`를 쓴다. 없으면 원본 크기 그대로 넣는다.
 - 표지 이미지는 세로형 JPG 또는 PNG를 사용한다. HWP는 내장 미리보기(PrvImage)를 표지 후보로 쓸 수 있다.
 
 ## Input Rules
@@ -37,7 +38,7 @@ Markdown(`.md`), Word(`.docx`), 한글(`.hwp`·`.hwpx`), 텍스트(`.txt`) 원�
 | --- | --- | --- |
 | Markdown | 메타데이터 제목, `#` 장, `##` 절 | 표지 제목을 본문의 `#`로 반복하지 않고, 제목 계층·이미지 상대 경로·내부 링크를 확인한다. |
 | DOCX | 문서 제목은 Title, 장·절은 Heading 1~3 | 수동 글꼴·여백·페이지 나누기·텍스트 상자는 EPUB 구조가 아니므로 최소화한다. |
-| HWP | 본문 문단 텍스트만 추출 | 표·이미지·글상자는 추출하지 않는다. 장 제목은 `N장.`·`제 N장`·`Chapter N` 패턴으로, 작품 제목은 원고 안 목차와 대조해 인식한다. 암호·배포용 잠금 문서는 먼저 해제한다. |
+| HWP | 본문 문단 + 내장 그림 | 표·글상자는 추출하지 않는다. 그림은 본문 위치에 넣고 `▲`로 시작하는 다음 문단을 설명으로 붙인다. 장 제목은 `N장.`·`제 N장`·`Chapter N` 패턴으로, 작품 제목은 원고 안 목차와 대조해 인식한다. 암호·배포용 잠금 문서는 먼저 해제한다. |
 | HWPX | `Contents/sectionN.xml`의 문단 | HWP와 같은 규칙을 적용한다. 별도 설치 없이 표준 라이브러리로 읽는다. |
 | TXT | 빈 줄=문단, 장 제목 규칙 | `제 N장`, `Chapter N`, `CHAPTER N`을 최상위 장 제목으로 인식한다. 다른 규칙이면 변환 전에 Markdown으로 구조화한다. |
 
@@ -70,7 +71,7 @@ python scripts/build_epub.py manuscript.hwp \
   --keep-markdown check.md --output "책제목_v1.0.epub"
 ```
 
-`--drop-leading`은 표지에 이미 있는 표제지 문단을 본문에서 제외한다. `--skip-check`는 검증을 건너뛰며 배포용 완료로 보지 않는다.
+`--drop-leading`은 표지에 이미 있는 표제지 문단을 본문에서 제외한다. `--skip-check`는 검증을 건너뛰며 배포용 완료로 보지 않는다. 그림은 `--max-image-width`·`--image-quality`·`--no-images`로 조정한다.
 
 ## Files
 
@@ -95,7 +96,8 @@ python scripts/build_epub.py manuscript.hwp \
 - TXT에는 제목 계층이 없으므로 장 제목 규칙을 자동 인식하지 못하면 한 개 장으로 생성된다.
 - `epubcheck` 통과는 모든 리더 앱에서의 시각 품질을 보장하지 않는다.
 - `epubcheck` 경고·오류가 있으면 배포용 EPUB으로 완료 처리하지 않는다.
-- HWP의 표·이미지·글상자는 변환되지 않는다. 신청서·보고서처럼 표 중심 문서는 EPUB 대상이 아니다.
+- HWP의 표·글상자는 변환되지 않는다. 신청서·보고서처럼 표 중심 문서는 EPUB 대상이 아니다.
+- 본문 그림은 기본값으로 가로 1600px·JPEG 85로 줄인다. 원본 해상도가 필요하면 `--max-image-width`를 올린다.
 - 운문 판정은 문단 길이와 문장부호로 추정한다. 시와 산문이 섞인 원고는 `--keep-markdown`으로 중간 결과를 확인한다.
 
 ## Verification

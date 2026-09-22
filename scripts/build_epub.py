@@ -78,6 +78,47 @@ def paragraphs_from_hwp(path):
     return hwp5.extract_paragraphs(path)
 
 
+def save_images(images, outdir, max_width, quality):
+    """추출한 그림을 EPUB용으로 줄여 저장한다.
+
+    Pillow가 없으면 원본을 그대로 쓴다. 반환: {문단 index: 상대 경로}
+    """
+    outdir.mkdir(parents=True, exist_ok=True)
+    try:
+        from PIL import Image
+    except ImportError:
+        Image = None
+
+    placed, total_in, total_out = {}, 0, 0
+    for n, (para, ext, data) in enumerate(images, start=1):
+        total_in += len(data)
+        if Image is None:
+            name = f"img{n:02d}.{ext}"
+            (outdir / name).write_bytes(data)
+        else:
+            import io as _io
+            im = Image.open(_io.BytesIO(data))
+            if im.width > max_width:
+                h = round(im.height * max_width / im.width)
+                im = im.resize((max_width, h), Image.LANCZOS)
+            opaque = im.mode not in ("RGBA", "LA") or \
+                im.getchannel("A").getextrema()[0] == 255
+            if opaque:
+                name = f"img{n:02d}.jpg"
+                im.convert("RGB").save(outdir / name, "JPEG",
+                                       quality=quality, optimize=True,
+                                       progressive=True)
+            else:
+                name = f"img{n:02d}.png"
+                im.save(outdir / name, "PNG", optimize=True)
+        total_out += (outdir / name).stat().st_size
+        placed[para] = f"{outdir.name}/{name}"
+    if images:
+        print(f"  그림 {len(images)}개: {total_in/1024/1024:.1f}MB "
+              f"-> {total_out/1024/1024:.1f}MB")
+    return placed
+
+
 def paragraphs_from_hwpx(path):
     ns = {"hp": "http://www.hancom.co.kr/hwpml/2011/paragraph"}
     paragraphs = []
@@ -114,14 +155,17 @@ def markdown_from_txt(paragraphs):
     return re.sub(r"\n{3,}", "\n\n", out).strip() + "\n"
 
 
-def build_markdown(src, workdir, drop_leading):
+def build_markdown(src, workdir, drop_leading, args):
     """입력을 Markdown 경로로 정규화한다. docx/md는 pandoc이 직접 읽는다."""
     suffix = src.suffix.lower()
     if suffix in (".md", ".markdown", ".docx"):
         return src, None
     if suffix == ".hwp":
-        paragraphs = paragraphs_from_hwp(src)
-        body = structure.to_markdown(paragraphs, drop_leading)
+        import hwp5
+        paragraphs, images = hwp5.extract_document(src)
+        placed = {} if args.no_images else save_images(
+            images, workdir / "images", args.max_image_width, args.image_quality)
+        body = structure.to_markdown(paragraphs, drop_leading, placed)
     elif suffix == ".hwpx":
         paragraphs = paragraphs_from_hwpx(src)
         body = structure.to_markdown(paragraphs, drop_leading)
@@ -152,6 +196,12 @@ def main():
                     help="본문 앞에서 버릴 문단 수 (표제지 중복 제거용)")
     ap.add_argument("--keep-markdown", default=None,
                     help="중간 Markdown을 이 경로에 남긴다")
+    ap.add_argument("--max-image-width", type=int, default=1600,
+                    help="본문 그림 최대 가로 픽셀. 기본 1600")
+    ap.add_argument("--image-quality", type=int, default=85,
+                    help="JPEG 품질. 기본 85")
+    ap.add_argument("--no-images", action="store_true",
+                    help="본문 그림을 넣지 않는다")
     ap.add_argument("--skip-check", action="store_true", help="epubcheck 검증을 건너뛴다")
     args = ap.parse_args()
 
@@ -182,7 +232,7 @@ def main():
         workdir = Path(tmpdir)
 
         print("[2/4] 원고 구조화")
-        md, count = build_markdown(src, workdir, args.drop_leading)
+        md, count = build_markdown(src, workdir, args.drop_leading, args)
         if count is not None:
             print(f"  문단 {count}개 추출 → {md.name}")
         else:
@@ -210,6 +260,7 @@ def main():
             "--metadata-file", str(meta),
             "--css", str(css),
             "--toc", f"--toc-depth={args.toc_depth}",
+            "--resource-path", str(workdir),
             "--split-level=1",
             "--output", str(out),
         ]

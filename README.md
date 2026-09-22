@@ -13,6 +13,7 @@ Markdown · Word · 한글(HWP/HWPX) · 텍스트 5종 입력을 하나의 EPUB 
 - `epubcheck` 자동 검증 (오류가 있으면 실패로 처리)
 - 원고 안 목차를 사전으로 삼아 장·절 제목 인식
 - 시(詩)의 행·연 구조 보존
+- HWP 내장 사진을 본문 위치에 배치하고 EPUB용 크기로 축소
 
 ## 설치
 
@@ -64,7 +65,8 @@ cd epub3-production
 
 ### 3단계 — 파이썬 의존성 (`.hwp` 입력만 해당)
 
-`.hwp`는 `olefile`이 필요합니다. `.hwpx` · `.md` · `.docx` · `.txt`만 쓴다면 건너뛰어도 됩니다.
+`.hwp`는 `olefile`이 필요합니다. 사진이 든 원고는 축소에 `Pillow`도 씁니다.
+`.hwpx` · `.md` · `.docx` · `.txt`만 쓴다면 건너뛰어도 됩니다.
 
 ```bash
 python3 -m venv .venv
@@ -95,7 +97,19 @@ python3 scripts/build_epub.py 원고.hwp \
 | `--drop-leading N` | 본문 앞 N개 문단 제외 (표지와 중복되는 표제지 제거용) |
 | `--keep-markdown 파일.md` | 중간 Markdown을 남겨 구조 인식 결과를 확인 |
 | `--toc-depth` | 목차 깊이. 기본 2 |
+| `--max-image-width` | 본문 그림 최대 가로 픽셀. 기본 1600 |
+| `--image-quality` | JPEG 품질. 기본 85 |
+| `--no-images` | 본문 그림을 넣지 않음 |
 | `--skip-check` | epubcheck 생략 (배포용 완료로 보지 않음) |
+
+### 사진이 든 HWP
+
+본문에 삽입된 사진을 찾아 원래 위치에 넣습니다. 사진 다음에 오는 `▲설명` 문단은
+그림 설명으로 붙고 본문에서는 빠집니다.
+
+기본값으로 가로 1600px, JPEG 품질 85로 줄입니다. 고해상도 사진이 많은 원고는
+용량이 크게 줄어듭니다(실측: 8.6MB → 0.7MB). 원본 해상도가 필요하면
+`--max-image-width 4000`처럼 올리세요.
 
 ### 변환 전 확인을 권합니다
 
@@ -115,13 +129,13 @@ python3 scripts/build_epub.py 원고.hwp --title "제목" --author "저자" \
 | --- | --- | --- |
 | Markdown | `#` 장, `##` 절 | pandoc이 직접 읽음 |
 | DOCX | Heading 1~3 | pandoc이 직접 읽음 |
-| HWP | `N장.` `제 N장` `Chapter N` + 원고 내 목차 대조 | `olefile` 필요 |
+| HWP | `N장.` `제 N장` `Chapter N` + 원고 내 목차 대조 | 내장 사진 포함. `olefile` 필요 |
 | HWPX | 위와 동일 | 추가 설치 불필요 |
 | TXT | 장 제목 패턴만 승격 | 빈 줄이 문단 구분 |
 
 ## 제약
 
-- **표·이미지·글상자는 변환되지 않습니다.** EPUB은 화면 크기에 따라 문장이 흐르는
+- **표·글상자는 변환되지 않습니다.** EPUB은 화면 크기에 따라 문장이 흐르는
   리플로우 형식이라 인쇄 조판은 재현 대상이 아닙니다. 신청서·보고서처럼 표 중심 문서는
   EPUB 대상이 아닙니다
 - 암호가 걸렸거나 배포용으로 잠긴 HWP는 한글에서 먼저 해제해야 합니다

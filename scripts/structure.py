@@ -19,6 +19,8 @@ NAMED_SECTIONS = {
 }
 TOC_MARKERS = {"목차", "차례", "contents", "table of contents"}
 GENRE_PREFIX = re.compile(r"^[-·•*]?\s*(시|수필|소설|산문|희곡|동화)\s*[:：]\s*(.*)$")
+# 그림 바로 뒤에 오는 설명 문단. 한글 원고에서 ▲·△로 시작하는 관례를 따른다.
+CAPTION = re.compile(r"^\s*[▲△▶◀■□●○]\s*(.+)$")
 
 # 마크다운 특수문자 이스케이프
 _ESCAPE = re.compile(r"([\\`*_\[\]<>|])")
@@ -92,9 +94,15 @@ def parse_toc(paragraphs):
     return works, start, end
 
 
-def to_markdown(paragraphs, drop_leading=0):
-    """문단 리스트 → Markdown 본문"""
+def to_markdown(paragraphs, drop_leading=0, images=None):
+    """문단 리스트 → Markdown 본문
+
+    images: {문단 index: 파일 경로} 형태. 해당 문단 자리에 그림을 넣는다.
+    그림 다음에 오는 ▲ 문단은 그림 설명으로 붙인다.
+    """
     works, toc_start, toc_end = parse_toc(paragraphs)
+    images = images or {}
+    caption_used = set()
 
     lines = []
     genre = "prose"      # 현재 절의 장르
@@ -112,6 +120,25 @@ def to_markdown(paragraphs, drop_leading=0):
             continue
         if toc_start is not None and toc_start <= i < toc_end:
             continue  # 목차 블록은 EPUB 내비게이션이 대신한다
+
+        if i in images:
+            flush_verse()
+            caption = ""
+            for j in range(i + 1, min(i + 6, len(paragraphs))):
+                if not paragraphs[j]:
+                    continue
+                match = CAPTION.match(paragraphs[j])
+                if match:
+                    caption = match.group(1).strip()
+                    caption_used.add(j)
+                break
+            lines.append("")
+            lines.append(f"![{escape_md(caption)}]({images[i]})")
+            lines.append("")
+            body_started = True
+
+        if i in caption_used:
+            continue
         if not text:
             flush_verse()
             continue
